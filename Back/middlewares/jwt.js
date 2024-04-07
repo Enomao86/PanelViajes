@@ -1,22 +1,19 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 
-const generarJWT = (uid = "") => {
-  return new Promise((res, rej) => {
-    const payload = { uid };
+const generarJWT = (userId) => {
+  return new Promise((resolve, reject) => {
+    const payload = { userId };
 
-    jwt.sign(
-      payload,
-      process.env.SECRETORPRIVATEKEY,
-      { expiresIn: "1h" },
-      (err, token) => {
-        if (err) {
-          console.log(err);
-          rej("No se pudo generar el token" + err.message);
-        } else {
-          res(token);
-        }
+    jwt.sign(payload, process.env.SECRETORPRIVATEKEY, {
+      expiresIn: '24h'
+    }, (err, token) => {
+      if (err) {
+        console.error('Error al generar el token:', err);
+        reject(err);
+      } else {
+        resolve(token);
       }
-    );
+    });
   });
 };
 

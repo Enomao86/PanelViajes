@@ -2,11 +2,13 @@
   "name": "gestionviajes",
   "version": "0.1.0",
   "private": true,
+  "proxy": "https://api.estadisticasbcra.com",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "autoprefixer": "^10.4.19",
+    "moment": "^2.30.1",
     "postcss": "^8.4.38",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

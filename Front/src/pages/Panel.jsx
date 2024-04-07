@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import Nav2 from "../components/Navbarpanel";
+import moment from 'moment';
 
 function Panel() {
   const [viajes, setViajes] = useState([]);
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [nombreViaje, setNombreViaje] = useState("");
   const [fechaViaje, setFechaViaje] = useState("");
-  const [nombrePasajero, setNombrePasajero] = useState("");
-  const [dniPasajero, setDniPasajero] = useState("");
-  const [telefonoPasajero, setTelefonoPasajero] = useState("");
+
   const [showModal, setShowModal] = useState(false);
 
   // Función para cargar los viajes al cargar el componente
@@ -19,48 +18,137 @@ function Panel() {
   // Función para cargar los viajes desde el backend
   const cargarViajes = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/viajes"); // Realiza una solicitud GET al endpoint /api/viajes
+      const userId = localStorage.getItem('userId');
+      const token = localStorage.getItem('token');
+  
+      const response = await fetch('http://localhost:8080/api/viajes/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'userid': userId
+        }
+      });
       if (!response.ok) {
         throw new Error("Error al cargar los viajes");
       }
-      const data = await response.json(); // Convierte la respuesta a formato JSON
-      const viajesActivos = data.filter((viaje) => viaje.estado === true);
-      setViajes(viajesActivos); // Actualiza el estado con los viajes recibidos del backend
+  
+      let data = await response.json();
+      // Si quieres mostrar todos los viajes, independientemente de su estado, puedes eliminar la siguiente línea
+      data = data.filter((viaje) => viaje.activo === true); // Muestra los viajes con estado !== false
+  
+      // Formatear la fecha para que no muestre la hora
+      data = data.map((viaje) => {
+        const fecha = new Date(viaje.fecha);
+        const fechaFormateada = `${fecha.getFullYear()}-${fecha.getMonth() + 1}-${fecha.getDate()}`;
+        return { ...viaje, fecha: fechaFormateada };
+      });
+  
+      setViajes(data);
     } catch (error) {
       console.error("Error al cargar los viajes:", error);
     }
   };
 
+  
   const handleAgregarViaje = async () => {
-    if (
-      nombreViaje.trim() !== "" &&
-      fechaViaje.trim() !== "" &&
-      esFechaValida(fechaViaje)
-    ) {
+    const userId = localStorage.getItem('userId'); // Add this line
+    console.log("Datos del nuevo viaje:", nombreViaje, fechaViaje, userId); // Log the nombreViaje and fechaViaje
+    if (nombreViaje.trim() !== "" && esFechaValida(fechaViaje)) {
       try {
         const response = await fetch("http://localhost:8080/api/viajes", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({ nombre: nombreViaje, fecha: fechaViaje }),
+          body: JSON.stringify({
+            nombre: nombreViaje,
+            fecha: fechaViaje,
+            usuario: userId,
+          }),
         });
-
-        if (response.ok) {
-          const nuevoViaje = await response.json();
-          setViajes([...viajes, nuevoViaje]);
-          setNombreViaje("");
-          setFechaViaje("");
-          setShowModal(false);
-        } else {
-          alert("Error al agregar el viaje");
+  
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+  
+        const nuevoViaje = await response.json();
+        console.log("Nuevo viaje creado:", nuevoViaje); 
+        setViajes([...viajes, nuevoViaje]);
+        setNombreViaje("");
+        setFechaViaje("");
+        setShowModal(false);
+        alert("Viaje agregado correctamente");
       } catch (error) {
         console.error("Error al agregar el viaje:", error);
-        alert("Error al agregar el viaje");
+        alert("Error al agregar el viaje: " + error.message);
       }
     } else {
       alert("Por favor ingrese una fecha válida en formato YYYY-MM-DD.");
+    }
+  };
+  
+  const esFechaValida = (fecha) => {
+    const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+    if (!fecha.match(regexFecha)) {
+      return false;
+    }
+  
+    const [year, month, day] = fecha.split("-");
+    const fechaObj = new Date(year, month - 1, day);
+  
+    return fechaObj && fechaObj.getFullYear() === parseInt(year) && fechaObj.getMonth() + 1 === parseInt(month) && fechaObj.getDate() === parseInt(day);
+  };
+
+  const handleEliminarViaje = async (viajeId) => {
+    try {
+      console.log("ViajeId:", viajeId); // Log the viajeId
+  
+      // Verifica que el viajeId es válido
+      if (!viajeId) {
+        alert("El ID del viaje seleccionado no es válido");
+        return;
+      }
+  
+      // Verifica que el viaje existe en la lista de viajes
+      const viaje = viajes.find(v => v._id === viajeId);
+      console.log("Viaje encontrado:", viaje); // Log the found viaje
+  
+      if (!viaje) {
+        alert("El viaje seleccionado no existe");
+        return;
+      }
+  
+      const userId = localStorage.getItem("userId"); // Obtén el ID del usuario de la sesión
+      const token = localStorage.getItem('token'); // Obtén el token del localStorage
+      console.log("UserId y Token:", userId, token); // Log the userId and token
+  
+      if (!userId || !token) {
+        alert("No se pudo obtener el ID del usuario o el token de la sesión");
+        return;
+      }
+  
+      const response = await fetch(`http://localhost:8080/api/viajes/${viajeId}`, {
+        method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'userid': userId
+        }
+      });
+  
+      console.log("Respuesta de la API:", response); // Log the API response
+  
+      if (response.ok) {
+        // Elimina el viaje eliminado del estado local
+        const updatedViajes = viajes.filter(v => v._id !== viajeId);
+        setViajes(updatedViajes);
+        alert("Viaje eliminado correctamente");
+      } else {
+        const errorMessage = await response.text();
+        alert("Error al eliminar el viaje: " + errorMessage);
+      }
+    } catch (error) {
+      console.error("Error al eliminar el viaje:", error);
+      alert("Error al eliminar el viaje: " + error.message);
     }
   };
 
@@ -68,84 +156,15 @@ function Panel() {
     setViajeSeleccionado(viaje);
   };
 
-  const handleEliminarViaje = async (viaje) => {
-    try {
-      // Realizar la solicitud DELETE al backend para eliminar el viaje
-      const response = await fetch(
-        `http://localhost:8080/api/viajes/${viaje._id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  
 
-      if (response.ok) {
-        // Si la eliminación es exitosa, actualiza la lista de viajes eliminando el viaje seleccionado
-        setViajes(viajes.filter((v) => v !== viaje));
-        setViajeSeleccionado(null);
-      } else {
-        // Si hay algún error en la eliminación, muestra un mensaje de error
-        console.error("Error al eliminar el viaje:", response.statusText);
-        // Puedes mostrar un mensaje de error al usuario si lo deseas
-      }
-    } catch (error) {
-      console.error("Error al eliminar el viaje:", error);
-      // Puedes manejar el error de la manera que desees, como mostrando un mensaje de error al usuario
-    }
-  };
 
-  const handleAgregarPasajero = () => {
-    if (
-      nombrePasajero.trim() !== "" &&
-      dniPasajero.trim() !== "" &&
-      telefonoPasajero.trim() !== ""
-    ) {
-      const viajesActualizados = viajes.map((v) => {
-        if (v === viajeSeleccionado) {
-          return {
-            ...v,
-            pasajeros: [
-              ...v.pasajeros,
-              {
-                nombre: nombrePasajero,
-                dni: dniPasajero,
-                telefono: telefonoPasajero,
-              },
-            ],
-          };
-        }
-        return v;
-      });
-      setViajes(viajesActualizados);
-      setNombrePasajero("");
-      setDniPasajero("");
-      setTelefonoPasajero("");
-    }
-  };
+ 
 
-  const handleEliminarPasajero = (pasajero) => {
-    const viajesActualizados = viajes.map((v) => {
-      if (v === viajeSeleccionado) {
-        return {
-          ...v,
-          pasajeros: v.pasajeros.filter((p) => p !== pasajero),
-        };
-      }
-      return v;
-    });
-    setViajes(viajesActualizados);
-  };
+  
 
-  const esFechaValida = (fecha) => {
-    const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
-    return regexFecha.test(fecha);
-  };
-
-  const totalPasajeros = viajeSeleccionado
-    ? viajeSeleccionado.pasajeros.length
-    : 0;
+ 
+  
 
   return (
     <div>
@@ -174,7 +193,7 @@ function Panel() {
                   Seleccionar
                 </button>
                 <button
-                  onClick={() => handleEliminarViaje(viaje)}
+                  onClick={() => handleEliminarViaje(viaje._id)}
                   className="ml-2 text-red-500"
                 >
                   Eliminar
@@ -198,13 +217,21 @@ function Panel() {
                 onChange={(e) => setNombreViaje(e.target.value)}
                 className="w-full px-4 py-2 border rounded mb-2"
               />
-              <input
-                type="date"
-                placeholder="Fecha del viaje"
-                value={fechaViaje}
-                onChange={(e) => setFechaViaje(e.target.value)}
-                className="w-full px-4 py-2 border rounded mb-2"
-              />
+            <input
+  type="date"
+  placeholder="Fecha del viaje"
+  value={fechaViaje}
+  onChange={(e) => {
+    const fecha = e.target.value;
+    const isValidDate = moment(fecha, 'YYYY-MM-DD', true).isValid();
+    if (isValidDate) {
+      setFechaViaje(fecha);
+    } else {
+      console.log('Fecha no válida');
+    }
+  }}
+  className="w-full px-4 py-2 border rounded mb-2"
+/>
               <button
                 onClick={handleAgregarViaje}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -215,70 +242,10 @@ function Panel() {
           )}
         </div>
 
-        <div className="w-1/2 p-4">
-          <h2 className="text-lg font-semibold mb-4">Pasajeros del Viaje</h2>
-          {viajeSeleccionado && (
-            <div>
-              <p>Total de Pasajeros: {totalPasajeros}</p>
-              <input
-                type="text"
-                placeholder="Nombre"
-                value={nombrePasajero}
-                onChange={(e) => setNombrePasajero(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") handleAgregarPasajero();
-                }}
-                className="w-full px-4 py-2 border rounded mb-2"
-              />
-              <input
-                type="text"
-                placeholder="DNI"
-                value={dniPasajero}
-                onChange={(e) => setDniPasajero(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") handleAgregarPasajero();
-                }}
-                className="w-full px-4 py-2 border rounded mb-2"
-              />
-              <input
-                type="text"
-                placeholder="Teléfono"
-                value={telefonoPasajero}
-                onChange={(e) => setTelefonoPasajero(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") handleAgregarPasajero();
-                }}
-                className="w-full px-4 py-2 border rounded mb-2"
-              />
-              <button
-                onClick={handleAgregarPasajero}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                Agregar Pasajero
-              </button>
-              <ul className="mt-4">
-                {viajeSeleccionado.pasajeros.map((pasajero, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center bg-gray-200 p-2 mb-2 rounded"
-                  >
-                    <span>
-                      {pasajero.nombre} - {pasajero.dni} - {pasajero.telefono}
-                    </span>
-                    <button
-                      onClick={() => handleEliminarPasajero(pasajero)}
-                      className="text-red-500"
-                    >
-                      Eliminar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        
         </div>
       </div>
-    </div>
+    
   );
 }
 

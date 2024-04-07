@@ -51,7 +51,7 @@ export default function Navbar() {
   );
 }
 
-const LoginModal = ({ onClose }) => {
+const LoginModal = ({ onClose, token }) => {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -69,8 +69,14 @@ const LoginModal = ({ onClose }) => {
       if (response.ok) {
         // La solicitud fue exitosa
         const data = await response.json();
-        // Aquí puedes manejar la respuesta del backend, por ejemplo, guardar el token de autenticación en el almacenamiento local
-        localStorage.setItem("token", data.token);
+        // Extraer el _id del usuario de la respuesta del servidor
+        const { usuario, token } = data;
+        const { _id,nombre } = usuario;
+        // Guardar el token y el _id del usuario en el almacenamiento local
+        localStorage.setItem("token", token);
+        localStorage.setItem("userId", _id);
+        localStorage.setItem('userName', nombre);
+
         console.log("Usuario autenticado correctamente:", data);
         onClose(); // Cerrar el modal después de iniciar sesión
         /* eslint-disable no-restricted-globals */

@@ -1,47 +1,48 @@
 import React, { useState, useEffect } from "react";
+import Dolar from "./dolar";
 
 function NavbarP() {
+  
   const [userName, setUserName] = useState("");
-  const [logoutError, setLogoutError] = useState(null);
+  const [logoutError] = useState(null);
 
   useEffect(() => {
-    // Obtener el nombre del usuario del almacenamiento local
-    const storedUserName = localStorage.getItem("userName");
-    if (storedUserName) {
-      setUserName(storedUserName);
-    }
+    // Función para actualizar el nombre del usuario
+    const updateUserName = () => {
+      const storedUserName = localStorage.getItem("userName");
+      if (storedUserName) {
+        setUserName(storedUserName);
+      }
+    };
+
+    // Actualizar el nombre del usuario al montar el componente
+    updateUserName();
+
+    // Actualizar el nombre del usuario cuando cambie el valor en localStorage
+    window.addEventListener('storage', updateUserName);
+
+    // Limpiar el listener al desmontar el componente
+    return () => {
+      window.removeEventListener('storage', updateUserName);
+    };
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      // Realizar la solicitud al backend para cerrar sesión
-      const response = await fetch("http://localhost:8080/api/auth/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Puedes enviar algún dato adicional si es necesario
-      });
-
-      if (response.ok) {
-        // Si la solicitud de logout es exitosa, borra el token del almacenamiento local
-        localStorage.removeItem("token");
-        localStorage.removeItem("userName");
-        // Redirige al usuario a la página de inicio de sesión u otra página que desees
-        window.location.href = "/";
-      } else {
-        // Si hay algún error en el logout, muestra un mensaje de error
-        setLogoutError("Error al cerrar sesión");
-      }
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-      setLogoutError("Error al cerrar sesión");
-    }
+  const handleLogout = () => {
+    // Borrar el token, el _id y el nombre del usuario del almacenamiento local
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+  
+    // Redirigir al usuario a localhost:3000
+    /* eslint-disable no-restricted-globals */
+    window.location.href = "http://localhost:3000";
   };
 
   return (
     <div className="navbar bg-gray-800 p-4 flex justify-between items-center text-white">
       <h4 className="text-lg font-semibold">Bienvenido, {userName}</h4>
+
+      <Dolar/>
       <button
         onClick={handleLogout}
         className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-white"

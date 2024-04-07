@@ -8,6 +8,8 @@ const { validarCampos } = require("../middlewares/validators");
 
 const { login } = require("../controllers/auth");
 
+
+
 router.post(
   "/login",
   [
@@ -17,5 +19,7 @@ router.post(
   ],
   login
 );
+
+
 
 module.exports = router;

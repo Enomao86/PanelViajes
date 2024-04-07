@@ -1,24 +1,26 @@
-const { Schema, model } = require("mongoose");
-
-
+const { mongoose,Schema, model } = require("mongoose");
 const ViajeSchema = new Schema({
+
+  
   nombre: {
     type: String,
-    required: true, // Indica que el campo es obligatorio
+    required: true,
   },
   fecha: {
     type: Date,
+    required: true,
   },
-  estado: {
+  usuario: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", // Esto debe coincidir con el nombre del modelo de usuario
+   
+  },
+  activo: {
     type: Boolean,
     default: true,
   },
-  usuario: {
-    type: Schema.Types.ObjectId,
-    ref: "Usuario", // Referencia al modelo de Usuario
-  },
 });
 
-const ViajeModel = model("Viaje", ViajeSchema); // Corregir el nombre del modelo
+const Viaje = model("Viaje", ViajeSchema);
 
-module.exports = ViajeModel;
+module.exports = Viaje;

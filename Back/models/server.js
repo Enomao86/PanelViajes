@@ -11,6 +11,7 @@ class Server {
     this.port = process.env.PORT;
     this.usuarioPath = "/api/usuarios";
     this.authPath = "/api/auth";
+   
     
 
     //5-4 nueva linea para crud viajes
@@ -48,7 +49,12 @@ class Server {
     this.app.use(this.usuarioPath, require("../routes/usuarios"));
     this.app.use(this.authPath, require("../routes/auth"));
     this.app.use(this.viajePath, require("../routes/viajeRoute"));
+  
+  
+  
   }
+  
+  
 
   listen() {
     this.app.listen(this.port, () => {

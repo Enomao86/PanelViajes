@@ -1,42 +1,85 @@
-const Viaje = require("../models/viajes");
+const Viaje = require("../models/viajes"); // Importar el modelo de Viaje
 
-// Controlador para crear un nuevo viaje
-exports.createViaje = async (req, res) => {
+const crearViaje = async (req, res) => {
   try {
-    const nuevoViaje = new Viaje(req.body);
+    const { nombre, fecha } = req.body; // Obtener el nombre y fecha del cuerpo de la solicitud
+    const nuevoViaje = new Viaje({
+      nombre,
+      fecha,
+      usuario: req.userId, // Asignar el ID del usuario al campo 'usuario' del viaje
+    });
+
+    // Guardar el nuevo viaje en la base de datos
     await nuevoViaje.save();
-    res.status(201).json(nuevoViaje);
+
+    // Enviar una respuesta exitosa
+    res
+      .status(201)
+      .json({ mensaje: "Viaje creado exitosamente", viaje: nuevoViaje });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    // Si hay algún error, enviar una respuesta de error
+    console.error("Error al crear el viaje:", error);
+    res.status(500).json({ error: "Error al crear el viaje" });
   }
 };
 
-// Controlador para obtener todos los viajes
-exports.getAllViajes = async (req, res) => {
+// Función para cargar los viajes desde el backend
+const obtenerViajes = async (req, res) => {
   try {
-    const viajes = await Viaje.find();
-    res.status(200).json(viajes);
+    const viajes = await Viaje.find({ usuario: req.userId, activo: true });
+    res.json(viajes);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error al obtener los viajes:", error);
+    res.status(500).json({ error: "Error al obtener los viajes" });
   }
 };
 
-// Otros controladores para actualizar, eliminar, obtener un viaje por ID, etc.
-exports.deleteViaje = async (req, res) => {
-  const { id } = req.params;
-
+const eliminarViajeLogico = async (req, res) => {
   try {
-    // Verificar si el viaje existe
-    const viaje = await Viaje.findById(id);
-    if (!viaje) {
-      return res.status(404).json({ message: "El viaje no existe" });
+    const { id } = req.params; // Obtener el ID del viaje desde los parámetros de la ruta
+
+    // Buscar el viaje en la base de datos y actualizar el campo 'activo' a false
+    const viajeEliminado = await Viaje.findByIdAndUpdate(id, { activo: false }, { new: true });
+
+    if (!viajeEliminado) {
+      return res.status(404).json({ error: "Viaje no encontrado" });
     }
 
-    // Realizar el borrado lógico actualizando el estado
-    await Viaje.findByIdAndUpdate(id, { estado: false });
-
-    res.status(200).json({ message: "Viaje eliminado exitosamente" });
+    // Enviar una respuesta exitosa
+    res.json({ mensaje: "Viaje eliminado exitosamente", viaje: viajeEliminado });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    // Si hay algún error, enviar una respuesta de error
+    console.error("Error al eliminar el viaje:", error);
+    res.status(500).json({ error: "Error al eliminar el viaje" });
   }
 };
+
+const agregarPasajero = async (req, res) => {
+  try {
+    const viajeId = req.params.id;
+    const { nombre, dni, telefono } = req.body;
+
+    const viaje = await Viaje.findById(viajeId);
+    if (!viaje) {
+      return res.status(404).json({ error: "Viaje no encontrado" });
+    }
+
+    const pasajero = { nombre, dni, telefono };
+    viaje.pasajeros.push(pasajero);
+
+    await viaje.save();
+
+    res.status(201).json({ mensaje: "Pasajero agregado exitosamente", pasajero });
+  } catch (error) {
+    console.error("Error al agregar pasajero:", error);
+    res.status(500).json({ error: "Error al agregar pasajero" });
+  }
+};
+
+module.exports = { crearViaje, obtenerViajes, eliminarViajeLogico, agregarPasajero };
+
+
+
+
+
+
